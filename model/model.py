@@ -66,7 +66,7 @@ def allocation_ab_factors(dict_impact_op: List[pd.DataFrame], df_ab_factors: Lis
 
 def compute_operator_weight(alloc_string: pd.Series, network_type: str, operators_data: pd.DataFrame):
         """Compute the repartition coefficients to distribute the impacts of shared equipments among the operators that are using them"""
-        # Exemple of string : orange, 50 / sfr, 60 / iliad, 30
+        # Exemple of string : operateur1, 50 / operateur2, 60 / operateur3, 30
         # 1. Clean the string and convert it to a dictionnary
         alloc_dict_str = dict(x.split(",") for x in alloc_string.split("/"))
         alloc_dict = {k: int(v) for k, v in alloc_dict_str.items()} # dictionnary with {operator : nb equipment}

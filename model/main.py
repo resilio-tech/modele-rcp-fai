@@ -71,7 +71,6 @@ def model_pipeline(operator_list : list[str], filename_list: dict[(str, str)]) -
                         dict_impact_list_summed[1].to_excel(writer, sheet_name='fixed_and_mobile', index=False)
                         dict_impact_list_summed[2].to_excel(writer, sheet_name='mobile', index=False)
 
-        print(dict_impact_list_modif_mob_fix['iliad'][0].columns)
         # Step 4 : Sum the impacts for each operator
         # We sum over all equipments and all life cycle steps.
         dict_impact_op = {}
