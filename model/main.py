@@ -5,23 +5,24 @@ import pandas as pd
 
 from typing import Optional, List
 
-from load_data import prepare_data, load_op_data, load_ab_factors, load_elec_consumption
-from model import compute_electrical_consumption, multiply_unitary_impacts_by_quantity, allocation_ab_factors, allocation_multi_op, allocation_multi_network, sum_impacts_on_type, sum_impacts_operator
+from load_data import prepare_data_flux_method, prepare_data_lifespan_method, load_op_data, load_ab_factors, load_elec_consumption
+from model import compute_electrical_consumption, multiply_unitary_impacts_by_quantity, multiply_unitary_impacts_by_quantity_and_lifespan, \
+        allocation_ab_factors, allocation_multi_op, allocation_multi_network, allocation_fu, sum_impacts_operator, compute_quality_score
+from results import save_results_detailed, save_results_by_category, save_results_percentage_by_category, save_results_global, save_quality_score_results
 
 
-def model_pipeline(operator_list : list[str], filename_list: dict[(str, str)]) -> pd.DataFrame:
+def model_pipeline_flux_method(operator_list : list[str], filename_list: dict[(str, str)], filename_impacts: str, filename_operator_data: str) -> pd.DataFrame:
         """Define the pipeline of the model"""
 
         # Load and clean the data. Put it in the right format
-        dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+        dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
         # dict_impact_list : contains impacts for every LC steps and indicators
         # dict_purchase_list : contains quantity of purchased equipments in year n, quality, sharing information, reconditioning ratio
         # dict_dismounting_list : contains quantity of dismounted equipments in year n, quality, sharing information
 
-        operators_data = load_op_data() # suscriber count, volume of transfered data and total electrical consumption for every operators
+        operators_data = load_op_data(filename_operator_data) # suscriber count, volume of transfered data and total electrical consumption for every operators
         df_ab_factors = load_ab_factors() # coefficients to allocate impacts to fixed and variable part of the network
         df_elec = load_elec_consumption() # estimated values of electrical consumption for all the equipments
-
 
         # Step 0 : Approximate electrical consumption of every equipments using energy estimation and real total energy consumed
         for operator in operator_list:
@@ -29,13 +30,13 @@ def model_pipeline(operator_list : list[str], filename_list: dict[(str, str)]) -
                 dict_purchase_list[operator] = compute_electrical_consumption(dict_purchase_list[operator], operator_data, df_elec)
 
 
-        # Step 0 : Multiply the unitary impacts for equipments by the number of equipments of each type
+        # Step 1 : Multiply the unitary impacts for equipments by the number of equipments of each type
         for operator in operator_list:
                 for i in range(0, 6):
                         dict_impact_list[operator][i] = multiply_unitary_impacts_by_quantity(dict_impact_list[operator][i], dict_purchase_list[operator][i], dict_dismounting_list[operator][i])
         
 
-        # Step 1 : Allocation with (a, b) for fixed and variable impacts of the network
+        # Step 2 : Allocation with (a, b) for fixed and variable impacts of the network
         dict_impact_list_ab = {} # new dict that contains impacts for every LC steps, indicators and for a/b
         for operator in operator_list:
                 dict_impact_list_ab[operator] = allocation_ab_factors(dict_impact_list[operator], df_ab_factors)
@@ -60,12 +61,96 @@ def model_pipeline(operator_list : list[str], filename_list: dict[(str, str)]) -
                 dict_impact_list_modif_mob_fix[operator] = allocation_multi_network(dict_impact_list_modif_mob_fix[operator], operator_data)
 
 
+        # Quality analysis
+        quality_dict = compute_quality_score(operator_list, dict_purchase_list, dict_impact_list_modif_mob_fix)
+        save_quality_score_results("../Resultats_quality_flux_method.xlsx", quality_dict)
+
+        # Save intermediate results for analysis
+        save_results_detailed(operator_list, dict_impact_list_modif_mob_fix)
+        save_results_by_category(operator_list, dict_impact_list_modif_mob_fix)
+        save_results_percentage_by_category(operator_list, dict_impact_list_modif_mob_fix)
+
+
+        # Step 4 : Sum the impacts for each operator
+        # We sum over all equipments and all life cycle steps.
+        dict_impact_op = {}
+        for operator in operator_list:
+                dict_op = sum_impacts_operator(dict_impact_list_modif_mob_fix[operator])
+
+                # dict_impact_op = dictionnary with {operator : {"fixed" : impacts , "mobile" : impacts}}
+                dict_impact_op[operator] = dict_op
+
+        # Save total results of operators
+        save_results_global("../Resultats_global_flux_method.xlsx", operator_list, dict_impact_op)
+
+        # Step 5 : Allocation for the FU calculations
+        for operator in operator_list:
+                operator_data = operators_data.loc[operator]
+                dict_impact_op[operator] = allocation_fu(dict_impact_op[operator], operator_data)
+
+
+        # Save FU results of operators
+        save_results_global("../Resultats_FU_flux_method.xlsx", operator_list, dict_impact_op)
+
+        return dict_impact_op
+
+
+#################################################################################
+
+
+def model_pipeline_lifespan_method(operator_list : list[str], filename_list: dict[(str, str)], filename_operator_data: str) -> pd.DataFrame:
+        """Define the pipeline of the model"""
+
+        # Load and clean the data. Put it in the right format
+        dict_impact_list, dict_inventory_list = prepare_data_lifespan_method(operator_list, filename_list)
+        # dict_impact_list : contains impacts for every LC steps and indicators
+        # dict_purchase_list : contains quantity of purchased equipments in year n, quality, sharing information, reconditioning ratio
+        # dict_dismounting_list : contains quantity of dismounted equipments in year n, quality, sharing information
+
+        operators_data = load_op_data(filename_operator_data) # suscriber count, volume of transfered data and total electrical consumption for every operators
+        df_ab_factors = load_ab_factors() # coefficients to allocate impacts to fixed and variable part of the network
+        df_elec = load_elec_consumption() # estimated values of electrical consumption for all the equipments
+
+        # Step 0 : Approximate electrical consumption of every equipments using energy estimation and real total energy consumed
+        for operator in operator_list:
+                operator_data = operators_data.loc[operator]
+                dict_inventory_list[operator] = compute_electrical_consumption(dict_inventory_list[operator], operator_data, df_elec)
+
+
+        # Step 1 : Multiply the unitary impacts for equipments by the number of equipments of each type
+        for operator in operator_list:
+                for i in range(0, 6):
+                        dict_impact_list[operator][i] = multiply_unitary_impacts_by_quantity_and_lifespan(dict_impact_list[operator][i], dict_inventory_list[operator][i])
+        
+
+        # Step 2 : Allocation with (a, b) for fixed and variable impacts of the network
+        dict_impact_list_ab = {} # new dict that contains impacts for every LC steps, indicators and for a/b
+        for operator in operator_list:
+                dict_impact_list_ab[operator] = allocation_ab_factors(dict_impact_list[operator], df_ab_factors)
+
+
+        # Step 3.a : Allocation for shared equipments
+        for operator in operator_list:
+                # Allocation for shared equipments for fixed network
+                dict_impact_list_modif_fix = allocation_multi_op("fixed", "full_inventory", dict_inventory_list[operator][3], dict_impact_list_ab, operator, operators_data)
+                # Allocation for shared equipments for mobile network
+                dict_impact_list_modif_mob = allocation_multi_op("mobile", "full_inventory", dict_inventory_list[operator][4], dict_impact_list_modif_fix, operator, operators_data)
+                # Allocation for shared equipments that are used for both fixed and mobile network
+                dict_impact_list_modif_mob_fix = allocation_multi_op("fixed_and_mobile", "full_inventory", dict_inventory_list[operator][5], dict_impact_list_modif_mob, operator, operators_data)
+
+
+        # Step 3.b : Allocation for shared equipments between fixed and mobile network
+        for operator in operator_list:
+                operator_data = operators_data.loc[operator]
+                dict_impact_list_modif_mob_fix[operator] = allocation_multi_network(dict_impact_list_modif_mob_fix[operator], operator_data)
+
+
         # Save intermediate results for analysis
         for operator in operator_list:
 
                 dict_impact_list_summed = sum_impacts_on_type(dict_impact_list_modif_mob_fix[operator])
 
-                file_name = "./Resultats_test_" + operator + ".xlsx"
+                file_name = "./Resultats_lifespan_method_test_" + operator + ".xlsx"
                 with pd.ExcelWriter(file_name) as writer:
                         dict_impact_list_summed[0].to_excel(writer, sheet_name='fixed', index=False)
                         dict_impact_list_summed[1].to_excel(writer, sheet_name='fixed_and_mobile', index=False)
@@ -84,18 +169,6 @@ def model_pipeline(operator_list : list[str], filename_list: dict[(str, str)]) -
         # Step 5 : Allocation for the FU calculations
         for operator in operator_list:
                 operator_data = operators_data.loc[operator]
-                # Temporal allocation on one month
-                dict_impact_op[operator]["fixed"]["impact"] = dict_impact_op[operator]["fixed"]["impact"].div(12)
-                dict_impact_op[operator]["mobile"]["impact"] = dict_impact_op[operator]["mobile"]["impact"].div(12)
-                # Allocation with the quantity of consummed data
-                normalisation_factor_fix_typA = operator_data['quantite_donnees_fix'] / 12
-                normalisation_factor_mob_typA = operator_data['quantite_donnees_mob'] / 12
-                dict_impact_op[operator]["fixed"]["impact"].loc[dict_impact_op[operator]["fixed"]["type"] == "typA"] = dict_impact_op[operator]["fixed"]["impact"][dict_impact_op[operator]["fixed"]["type"] == "typA"] / normalisation_factor_fix_typA
-                dict_impact_op[operator]["mobile"]["impact"].loc[dict_impact_op[operator]["mobile"]["type"] == "typA"] = dict_impact_op[operator]["mobile"]["impact"][dict_impact_op[operator]["mobile"]["type"] == "typA"] / normalisation_factor_mob_typA
-                # Allocation with the number of users
-                normalisation_factor_fix_typB = operator_data['nb_abonnes_fix'] / 12
-                normalisation_factor_mob_typB = operator_data['nb_abonnes_mob'] / 12
-                dict_impact_op[operator]["fixed"]["impact"][dict_impact_op[operator]["fixed"]["type"] == "typB"] = dict_impact_op[operator]["fixed"]["impact"][dict_impact_op[operator]["fixed"]["type"] == "typB"] / normalisation_factor_fix_typB
-                dict_impact_op[operator]["mobile"]["impact"][dict_impact_op[operator]["mobile"]["type"] == "typB"] = dict_impact_op[operator]["mobile"]["impact"][dict_impact_op[operator]["mobile"]["type"] == "typB"] / normalisation_factor_mob_typB
-
+                dict_impact_op[operator] = allocation_fu(dict_impact_op[operator], operator_data)
+                
         return dict_impact_op

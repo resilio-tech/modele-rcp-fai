@@ -1,7 +1,8 @@
 
+import pandas as pd
 
-from main import model_pipeline
-from load_data import prepare_data, load_ab_factors, load_op_data, load_elec_consumption
+from main import model_pipeline_flux_method, model_pipeline_lifespan_method
+from load_data import prepare_data_flux_method, prepare_data_lifespan_method, load_ab_factors, load_op_data, load_elec_consumption
 from model import compute_electrical_consumption, multiply_unitary_impacts_by_quantity, allocation_ab_factors, compute_operator_weight, allocation_multi_network, allocation_multi_op, sum_impacts_operator
 
 
@@ -11,10 +12,13 @@ def test_data_format():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
-    
-    # WHEN 
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    filename_operator_data = "../../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
 
+    # WHEN 
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
+    print(dict_impact_list)
+    print(dict_purchase_list)
     # THEN
     assert len(dict_impact_list) == len(dict_purchase_list)
     assert len(dict_impact_list) == len(dict_dismounting_list)
@@ -27,10 +31,12 @@ def test_compute_elec():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
-    operators_data = load_op_data()
+    filename_operator_data = "../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
+    operators_data = load_op_data(filename_operator_data)
     df_elec = load_elec_consumption()
     
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
     # WHEN
     for operator in operator_list:
@@ -48,10 +54,12 @@ def test_impact_multiplication():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
-    operators_data = load_op_data()
+    filename_operator_data = "../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
+    operators_data = load_op_data(filename_operator_data)
     df_elec = load_elec_consumption()
     
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
@@ -64,11 +72,10 @@ def test_impact_multiplication():
 
     # THEN
     assert dict_impact_list['operateur1'][0]["BLD ADPe"].iloc[0] == 50*0.8*1
-    assert dict_impact_list['operateur1'][0]["DIS ADPe"].iloc[0] == 50*0.8*2
-    assert dict_impact_list['operateur1'][0]["INS ADPe"].iloc[0] == 0
-    assert dict_impact_list['operateur1'][0]["USE ADPe"].iloc[0] == (348333+1/3)*3
-    assert dict_impact_list['operateur1'][0]["REC ADPe"].iloc[0] == 50*0.2*4
-    assert dict_impact_list['operateur1'][0]["EOL ADPe"].iloc[0] == 10*5
+    assert dict_impact_list['operateur1'][0]["DIS ADPe"].iloc[0] == 50*0.8*1
+    assert dict_impact_list['operateur1'][0]["USE ADPe"].iloc[0] == (348333+1/3)*1
+    assert dict_impact_list['operateur1'][0]["REC ADPe"].iloc[0] == 50*0.2*1
+    assert dict_impact_list['operateur1'][0]["EOL ADPe"].iloc[0] == 10*1
     assert dict_impact_list['operateur1'][3]["BLD ADPe"].iloc[0] == 100*1
     assert dict_impact_list['operateur1'][3]["EOL ADPe"].iloc[0] == 0
 
@@ -78,11 +85,13 @@ def test_allocation_ab():
     # GIVEN
     operator_list = ['operateur1']
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx"}
+    filename_operator_data = "../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
     df_ab_factors = load_ab_factors()
-    operators_data = load_op_data()
+    operators_data = load_op_data(filename_operator_data)
     df_elec = load_elec_consumption()
 
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
     dict_purchase_list['operateur1'] = compute_electrical_consumption(dict_purchase_list['operateur1'], operators_data.loc['operateur1'], df_elec)
 
@@ -103,7 +112,9 @@ def test_allocation_ab():
 
 def test_compute_operator_weight_fixed_network():
     # GIVEN operateur1 as an operator and one exemple allocation in alloc_string, for fixed network
-    operators_data = load_op_data()
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
+    filename_operator_data = "../data_operateurs.xlsx"
+    operators_data = load_op_data(filename_operator_data)
     operator_data = operators_data.loc["operateur1"]
     alloc_string = "operateur2,50/operateur3,60/operateur1,30"
     network_type = "fixed"
@@ -133,7 +144,9 @@ def test_compute_operator_weight_fixed_network():
 
 def test_compute_operator_weight_fixed_and_mobile_network():
     # GIVEN operateur1 as an operator and one exemple allocation in alloc_string, for fixed and mobile network
-    operators_data = load_op_data()
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
+    filename_operator_data = "../data_operateurs.xlsx"
+    operators_data = load_op_data(filename_operator_data)
     operator_data = operators_data.loc["operateur1"]
     alloc_string = "operateur2,50/operateur3,60/operateur1,30"
     network_type = "fixed_and_mobile"
@@ -169,11 +182,13 @@ def test_allocation_multi_op():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
+    filename_operator_data = "../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
     df_ab_factors = load_ab_factors()
-    operators_data = load_op_data()
+    operators_data = load_op_data(filename_operator_data)
     df_elec = load_elec_consumption()
     
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
@@ -220,11 +235,13 @@ def test_allocation_multi_network():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
+    filename_operator_data = "../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
     df_ab_factors = load_ab_factors()
-    operators_data = load_op_data()
+    operators_data = load_op_data(filename_operator_data)
     df_elec = load_elec_consumption()
     
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
@@ -276,11 +293,13 @@ def test_sum_impacts():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
+    filename_operator_data = "../data_operateurs.xlsx"
+    filename_impacts = "../Facteurs_impacts_test.xlsx"
     df_ab_factors = load_ab_factors()
-    operators_data = load_op_data()
+    operators_data = load_op_data(filename_operator_data)
     df_elec = load_elec_consumption()
     
-    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data(operator_list, filename_list)
+    dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
     for operator in operator_list:
             operator_data = operators_data.loc[operator]
@@ -319,3 +338,17 @@ def test_sum_impacts():
     # THEN
     diff = dict_impact_op['operateur1']["fixed"]["impact"].iloc[0] - (75.1428571428571+115.142857142857+228504.935714286+40+59.4285714285714)
     assert diff <= 0.01
+
+
+"""
+def test_model_lifespan_method():
+    # GIVEN
+    operator_list = ['operateur1', 'operateur2', 'operateur3']
+    filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
+                    'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
+                    'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
+    dict_data_operator = model_pipeline_lifespan_method(operator_list, filename_list)
+    assert False
+"""
+
+    

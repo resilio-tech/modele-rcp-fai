@@ -19,10 +19,10 @@ def compute_electrical_consumption(dict_purchase_list: List[pd.DataFrame], opera
                 
         # Allocation of electrical consumption among the equipments
         dict_purchase_list[0]["real_elec"] = dict_purchase_list[0]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
-        dict_purchase_list[1]["real_elec"] = dict_purchase_list[1]["estimated_elec"]*0
+        dict_purchase_list[1]["real_elec"] = dict_purchase_list[1]["estimated_elec"]
         dict_purchase_list[2]["real_elec"] = dict_purchase_list[2]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
         dict_purchase_list[3]["real_elec"] = dict_purchase_list[3]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
-        dict_purchase_list[4]["real_elec"] = dict_purchase_list[4]["estimated_elec"]*0
+        dict_purchase_list[4]["real_elec"] = dict_purchase_list[4]["estimated_elec"]
         dict_purchase_list[5]["real_elec"] = dict_purchase_list[5]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
         
         return dict_purchase_list
@@ -44,8 +44,23 @@ def multiply_unitary_impacts_by_quantity(dict_impact: pd.DataFrame, dict_purchas
         return dict_impact
 
 
+def multiply_unitary_impacts_by_quantity_and_lifespan(dict_impact: pd.DataFrame, dict_inventory: pd.DataFrame) -> pd.DataFrame:
+        # Separation between newly bought and reconditionned equipments
+        dict_inventory["quantity_new"] = dict_inventory["quantity"]*(1-dict_inventory["reconditioning_percent"])
+        dict_inventory["quantity_reconditioning"] = dict_inventory["quantity"]*dict_inventory["reconditioning_percent"]
+
+        # Multiplication of the unitary impacts by the volume of equipments
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]].multiply(dict_inventory["quantity_new"], axis="index").div(dict_inventory["lifespan"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]].multiply(dict_inventory["quantity_new"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]].multiply(dict_inventory["real_elec"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]].multiply(dict_inventory["quantity"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]].multiply(dict_inventory["quantity_reconditioning"], axis="index")
+        
+        return dict_impact
+
+
 def allocation_ab_factors(dict_impact_op: List[pd.DataFrame], df_ab_factors: List[pd.DataFrame]) -> List[pd.DataFrame]:
-        LC_STEPS = ["BLD", "DIS", "INS", "USE", "REC", "EOL"]
+        LC_STEPS = ["BLD", "DIS", "USE", "REC", "EOL"]
         INDICATOR_LIST = ["ADPe", "GWP", "AP", "PM", "IR", "TPE"]
         for i in range(0, 6):
                 r = i%3
@@ -113,16 +128,22 @@ def allocation_multi_op(network_type: str, inventory_type: str, inventory_op_i: 
                                         for col in dict_impact_list[k][0]:
                                                 if (inventory_type == "purchase"):
                                                         if (("EOL" not in col) and ("typA" in col)):
-                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]] + dict_impact_list[operator][3][col].iloc[[index]]*v['a']
+                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]].to_numpy() + dict_impact_list[operator][3][col].iloc[[index]].to_numpy()*v['a']
                                                         if (("EOL" not in col) and ("typB" in col)):
-                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]] + dict_impact_list[operator][3][col].iloc[[index]]*v['b']
+                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]].to_numpy() + dict_impact_list[operator][3][col].iloc[[index]].to_numpy()*v['b']
                                                 elif (inventory_type == "dismounting"):
                                                         if (("EOL" in col) and ("typA" in col)):
-                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]] + dict_impact_list[operator][3][col].iloc[[index]]*v['a']
+                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]].to_numpy() + dict_impact_list[operator][3][col].iloc[[index]].to_numpy()*v['a']
                                                         if (("EOL" in col) and ("typB" in col)):
-                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]] + dict_impact_list[operator][3][col].iloc[[index]]*v['b']
+                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]].to_numpy() + dict_impact_list[operator][3][col].iloc[[index]].to_numpy()*v['b']
+                                                elif (inventory_type == "full_inventory"):
+                                                        if ("typA" in col):
+                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]].to_numpy() + dict_impact_list[operator][3][col].iloc[[index]].to_numpy()*v['a']
+                                                        if ("typB" in col):
+                                                                dict_impact_list[k][0][col].iloc[[index]] = dict_impact_list[k][0][col].iloc[[index]].to_numpy() + dict_impact_list[operator][3][col].iloc[[index]].to_numpy()*v['b']
                                                 
-        if (network_type == "mobile"): # Mobile network
+        
+        if (network_type == "fixed_and_mobile"): # Mobile network
                 # We consider the inventory of one operator
                 for index, row in inventory_op_i.iterrows():
                         if (not pd.isnull(row["sharing"])):
@@ -134,17 +155,22 @@ def allocation_multi_op(network_type: str, inventory_type: str, inventory_op_i: 
                                         for col in dict_impact_list[k][1]:
                                                 if (inventory_type == "purchase"):
                                                         if (("EOL" not in col) and ("typA" in col)):
-                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]] + dict_impact_list[operator][4][col].iloc[[index]]*v['a']
+                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]].to_numpy() + dict_impact_list[operator][4][col].iloc[[index]].to_numpy()*v['a']
                                                         if (("EOL" not in col) and ("typB" in col)):
-                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]] + dict_impact_list[operator][4][col].iloc[[index]]*v['b']
+                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]].to_numpy() + dict_impact_list[operator][4][col].iloc[[index]].to_numpy()*v['b']
                                                 elif (inventory_type == "dismounting"):
                                                         if (("EOL" in col) and ("typA" in col)):
-                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]] + dict_impact_list[operator][4][col].iloc[[index]]*v['a']
+                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]].to_numpy() + dict_impact_list[operator][4][col].iloc[[index]].to_numpy()*v['a']
                                                         if (("EOL" in col) and ("typB" in col)):
-                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]] + dict_impact_list[operator][4][col].iloc[[index]]*v['b']
+                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]].to_numpy() + dict_impact_list[operator][4][col].iloc[[index]].to_numpy()*v['b']
+                                                elif (inventory_type == "full_inventory"):
+                                                        if ("typA" in col):
+                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]].to_numpy() + dict_impact_list[operator][4][col].iloc[[index]].to_numpy()*v['a']
+                                                        if ("typB" in col):
+                                                                dict_impact_list[k][1][col].iloc[[index]] = dict_impact_list[k][1][col].iloc[[index]].to_numpy() + dict_impact_list[operator][4][col].iloc[[index]].to_numpy()*v['b']
                                                   
 
-        if (network_type == "fixed_and_mobile"): # For both fixed and mobile networks
+        if (network_type == "mobile"): # For both fixed and mobile networks
                 # We consider the inventory of one operator
                 for index, row in inventory_op_i.iterrows():
                         if (not pd.isnull(row["sharing"])):
@@ -164,12 +190,18 @@ def allocation_multi_op(network_type: str, inventory_type: str, inventory_op_i: 
                                                                 dict_impact_list[k][2][col].iloc[[index]] = dict_impact_list[k][2][col].iloc[[index]] + dict_impact_list[operator][5][col].iloc[[index]]*v['a']
                                                         if (("EOL" in col) and ("typB" in col)):
                                                                 dict_impact_list[k][2][col].iloc[[index]] = dict_impact_list[k][2][col].iloc[[index]] + dict_impact_list[operator][5][col].iloc[[index]]*v['b']
+                                                elif (inventory_type == "full_inventory"):
+                                                        if ("typA" in col):
+                                                                dict_impact_list[k][2][col].iloc[[index]] = dict_impact_list[k][2][col].iloc[[index]] + dict_impact_list[operator][5][col].iloc[[index]]*v['a']
+                                                        if ("typB" in col):
+                                                                dict_impact_list[k][2][col].iloc[[index]] = dict_impact_list[k][2][col].iloc[[index]] + dict_impact_list[operator][5][col].iloc[[index]]*v['b']
                                                 
+
         return dict_impact_list
 
 
 
-def allocation_multi_network(impact_op : list[pd.DataFrame], operator_data: pd.DataFrame) -> list[pd.DataFrame]:
+def allocation_multi_network(impact_op : List[pd.DataFrame], operator_data: pd.DataFrame) -> List[pd.DataFrame]:
         """Distribute the impacts of the equipments used for both fixed and mobile networks between these two types"""
 
         operator_weight_a_fix = operator_data['quantite_donnees_fix']/(operator_data['quantite_donnees_fix']+operator_data['quantite_donnees_mob'])
@@ -194,22 +226,30 @@ def allocation_multi_network(impact_op : list[pd.DataFrame], operator_data: pd.D
         return impact_op
 
 
-def sum_impacts_on_type(dict_impact_op: List[pd.DataFrame]) -> List[pd.DataFrame]:
-        LC_STEPS = ["BLD", "DIS", "INS", "USE", "REC", "EOL"]
-        INDICATOR_LIST = ["ADPe", "GWP", "AP", "PM", "IR", "TPE"]
-        dict_impact_op_summed = dict_impact_op.copy()
-        for i in range(0, 6):
-                for lc_step in LC_STEPS:
-                        for ind in INDICATOR_LIST:
-                                old_column_name_a = lc_step + " " + ind + " typA"
-                                old_column_name_b = lc_step + " " + ind + " typB"
-                                new_column_name = lc_step + " " + ind
-                                # create one new column that is the sum of the columns typA and typB
-                                dict_impact_op_summed[i][new_column_name] = dict_impact_op_summed[i][old_column_name_a] + dict_impact_op_summed[i][old_column_name_b]
-                                # drop the old columns
-                                dict_impact_op_summed[i] = dict_impact_op_summed[i].drop([old_column_name_a], axis=1)
-                                dict_impact_op_summed[i] = dict_impact_op_summed[i].drop([old_column_name_b], axis=1)
-        return dict_impact_op_summed
+def compute_quality_score(operator_list: List[str], dict_purchase_list: dict[(str, list[pd.DataFrame])], dict_impact: dict[(str, list[pd.DataFrame])]) -> dict[(str, float)]:
+        PLANETARY_BOUNDARIES = {'ADPe': 3.18e-2,
+                                'GWP': 9.85e2,
+                                'AP': 1.45e2,
+                                'PM': 7.47e-5,
+                                'IR': 7.62e4}
+        quality_score_dict = {}
+        for operator in operator_list:
+                total_weighted_quality = 0
+                total_impacts = 0
+                for i in [0, 2]:
+                        df_impacts = dict_impact[operator][i].drop(['category', 'equipment'], axis=1).T.reset_index()
+                        df_impacts[['lc_step', 'indicator', 'type']] = df_impacts["index"].str.split(pat=' ', expand=True)
+                        df_impacts = df_impacts.drop(["index", "lc_step", "type"], axis=1)
+                        df_impacts = df_impacts.groupby(['indicator']).sum().reset_index()
+                        df_impacts.index = df_impacts["indicator"]
+                        df_impacts = df_impacts.drop(['indicator'], axis=1).T
+                        df_impacts = df_impacts.drop(['TPE'], axis=1)
+                        df_impacts_weight = df_impacts.divide(PLANETARY_BOUNDARIES, axis=1).sum(axis=1)
+                        df_impacts["weighted_quality"] = df_impacts_weight*dict_purchase_list[operator][i]["quality_score"]
+                        total_weighted_quality += df_impacts["weighted_quality"].sum()
+                        total_impacts += df_impacts_weight.sum()
+                quality_score_dict[operator] = total_weighted_quality/total_impacts
+        return quality_score_dict
 
 
 def sum_impacts_operator(impact_op : list[pd.DataFrame]) -> dict[(str, pd.DataFrame)]:
@@ -222,3 +262,21 @@ def sum_impacts_operator(impact_op : list[pd.DataFrame]) -> dict[(str, pd.DataFr
         dict_op["mobile"][['lc_step', 'indicator', 'type']] = dict_op["mobile"]['index'].str.split(pat=' ', expand=True)
         dict_op["mobile"] = dict_op["mobile"].groupby(['indicator', 'type'])["impact"].sum().reset_index()
         return dict_op
+
+
+def allocation_fu(dict_impact_op : dict[(str, pd.DataFrame)], operator_data: pd.DataFrame) -> dict[(str, pd.DataFrame)]:
+        # Temporal allocation on one month
+        dict_impact_op["fixed"]["impact"] = dict_impact_op["fixed"]["impact"].div(12)
+        dict_impact_op["mobile"]["impact"] = dict_impact_op["mobile"]["impact"].div(12)
+        # Allocation with the quantity of consummed data
+        normalisation_factor_fix_typA = operator_data['quantite_donnees_fix'] / 12
+        normalisation_factor_mob_typA = operator_data['quantite_donnees_mob'] / 12
+        dict_impact_op["fixed"]["impact"].loc[dict_impact_op["fixed"]["type"] == "typA"] = dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typA"] / normalisation_factor_fix_typA
+        dict_impact_op["mobile"]["impact"].loc[dict_impact_op["mobile"]["type"] == "typA"] = dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typA"] / normalisation_factor_mob_typA
+        # Allocation with the number of users
+        normalisation_factor_fix_typB = operator_data['nb_abonnes_fix'] / 12
+        normalisation_factor_mob_typB = operator_data['nb_abonnes_mob'] / 12
+        dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typB"] = dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typB"] / normalisation_factor_fix_typB
+        dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typB"] = dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typB"] / normalisation_factor_mob_typB
+
+        return dict_impact_op
