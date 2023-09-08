@@ -4,28 +4,35 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 from typing import Optional, List
 
-def compute_electrical_consumption(dict_purchase_list: List[pd.DataFrame], operator_data: pd.DataFrame, df_elec: List[pd.DataFrame]) -> List[pd.DataFrame]:
+def compute_electrical_consumption(inventory_type: str, dict_list: List[pd.DataFrame], operator_data: pd.DataFrame, df_elec: List[pd.DataFrame]) -> List[pd.DataFrame]:
+        
+        # Adding the box consumption to the electricity consumption
+        for i in [0, 3]:
+                df_box = dict_list[i].loc[dict_list[i]["equipment"].str.contains('|'.join(['Box', 'ONT']))][["equipment", "quantity"]]
+                elec_box_unit = pd.DataFrame([93.4675, 93.4675, 93.4675, 35.04, 93.4675], columns=['annual_elec'])
+                elex_box_total = (df_box["quantity"]*elec_box_unit["annual_elec"]).sum()
+                operator_data["conso_elec_fix"] += elex_box_total
+        
         list_elec = []
-
         for i in range(0, 6):
                 r = i%3
                 # Allocation of electrical consumption among the equipments
-                dict_purchase_list[i]["estimated_elec"] = dict_purchase_list[i]["quantity"]*df_elec[r]["elec"]
-                total_elec_cat = dict_purchase_list[i]["estimated_elec"].sum()
+                dict_list[i]["estimated_elec"] = dict_list[i]["quantity"]*df_elec[r]["elec"]
+                total_elec_cat = dict_list[i]["estimated_elec"].sum()
                 list_elec.append(total_elec_cat)
 
         total_elec_fixed = list_elec[0] + list_elec[3]
         total_elec_mobile = list_elec[2] + list_elec[5]
-                
-        # Allocation of electrical consumption among the equipments
-        dict_purchase_list[0]["real_elec"] = dict_purchase_list[0]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
-        dict_purchase_list[1]["real_elec"] = dict_purchase_list[1]["estimated_elec"]
-        dict_purchase_list[2]["real_elec"] = dict_purchase_list[2]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
-        dict_purchase_list[3]["real_elec"] = dict_purchase_list[3]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
-        dict_purchase_list[4]["real_elec"] = dict_purchase_list[4]["estimated_elec"]
-        dict_purchase_list[5]["real_elec"] = dict_purchase_list[5]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
         
-        return dict_purchase_list
+        # Allocation of electrical consumption among the equipments
+        dict_list[0]["real_elec"] = dict_list[0]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
+        dict_list[1]["real_elec"] = dict_list[1]["estimated_elec"]
+        dict_list[2]["real_elec"] = dict_list[2]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
+        dict_list[3]["real_elec"] = dict_list[3]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
+        dict_list[4]["real_elec"] = dict_list[4]["estimated_elec"]
+        dict_list[5]["real_elec"] = dict_list[5]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
+        
+        return dict_list, operator_data
 
 
 def multiply_unitary_impacts_by_quantity(dict_impact: pd.DataFrame, dict_purchase: pd.DataFrame, dict_dismounting: pd.DataFrame) -> pd.DataFrame:
@@ -51,12 +58,12 @@ def multiply_unitary_impacts_by_quantity_and_lifespan(dict_impact: pd.DataFrame,
 
         # Multiplication of the unitary impacts by the volume of equipments
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]].multiply(dict_inventory["quantity_new"], axis="index").div(dict_inventory["lifespan"], axis="index")
-        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]].multiply(dict_inventory["quantity_new"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]].multiply(dict_inventory["quantity_new"], axis="index").div(dict_inventory["lifespan"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]].multiply(dict_inventory["real_elec"], axis="index")
-        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]].multiply(dict_inventory["quantity"], axis="index")
-        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]].multiply(dict_inventory["quantity_reconditioning"], axis="index")
-        
-        return dict_impact
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]].multiply(dict_inventory["quantity"], axis="index").div(dict_inventory["lifespan"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]].multiply(dict_inventory["quantity_reconditioning"], axis="index").div(dict_inventory["lifespan"], axis="index")
+        dict_impact_clean = dict_impact.fillna(0)
+        return dict_impact_clean
 
 
 def allocation_ab_factors(dict_impact_op: List[pd.DataFrame], df_ab_factors: List[pd.DataFrame]) -> List[pd.DataFrame]:
@@ -269,13 +276,13 @@ def allocation_fu(dict_impact_op : dict[(str, pd.DataFrame)], operator_data: pd.
         dict_impact_op["fixed"]["impact"] = dict_impact_op["fixed"]["impact"].div(12)
         dict_impact_op["mobile"]["impact"] = dict_impact_op["mobile"]["impact"].div(12)
         # Allocation with the quantity of consummed data
-        normalisation_factor_fix_typA = operator_data['quantite_donnees_fix'] / 12
-        normalisation_factor_mob_typA = operator_data['quantite_donnees_mob'] / 12
+        normalisation_factor_fix_typA = operator_data['quantite_donnees_fix']*1024 / 12
+        normalisation_factor_mob_typA = operator_data['quantite_donnees_mob']*1024 / 12
         dict_impact_op["fixed"]["impact"].loc[dict_impact_op["fixed"]["type"] == "typA"] = dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typA"] / normalisation_factor_fix_typA
         dict_impact_op["mobile"]["impact"].loc[dict_impact_op["mobile"]["type"] == "typA"] = dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typA"] / normalisation_factor_mob_typA
         # Allocation with the number of users
-        normalisation_factor_fix_typB = operator_data['nb_abonnes_fix'] / 12
-        normalisation_factor_mob_typB = operator_data['nb_abonnes_mob'] / 12
+        normalisation_factor_fix_typB = operator_data['nb_abonnes_fix']
+        normalisation_factor_mob_typB = operator_data['nb_abonnes_mob']
         dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typB"] = dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typB"] / normalisation_factor_fix_typB
         dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typB"] = dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typB"] / normalisation_factor_mob_typB
 

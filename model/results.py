@@ -42,32 +42,65 @@ def percentage_by_category(df_impact_cat: pd.DataFrame) -> pd.DataFrame:
 
 #################################################################
 
-def save_results_detailed(operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
-    """ Save in one file all the detailed results for every indicators (one sheet per operator)"""
-    file_name = "../Results_detailed_flux_method.xlsx"
+def save_detail_table_excel(filename: str, operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
+    dict_impact_op_concat = []
+    for operator in operator_list:
+        dict_impact_op[operator][0].insert(0, 'network_type', 'fixe')
+        dict_impact_op[operator][2].insert(0, 'network_type', 'mobile')
+        frames = [dict_impact_op[operator][0], dict_impact_op[operator][2]]
+        impact_op_concat = pd.concat(frames)
+        impact_op_concat.insert(0, 'operator', operator)
+        dict_impact_op_concat.append(impact_op_concat)
+    impact_op_concat = pd.concat(dict_impact_op_concat)
+    all_cols = list(impact_op_concat.columns)
+    cols = [el for el in all_cols if el not in ['operator', 'network_type', 'category', 'equipment']]
+    df_table = pd.melt(impact_op_concat, id_vars=['operator','network_type', 'category', 'equipment'], value_vars=cols)
+    df_table[['lc_step', 'indicator', 'indicator_type']] = df_table['variable'].str.split(pat=' ', expand=True)
+    df_table = df_table.drop('variable', axis=1)
+    col_value = df_table.pop('value')
+    df_table.insert(len(df_table.columns), 'value', col_value)
+    with pd.ExcelWriter(filename) as writer:
+        df_table.to_excel(writer, index=False)
 
-    with pd.ExcelWriter(file_name) as writer:
+
+def save_FU_table_excel(filename: str, operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
+    dict_impact_op_concat = []
+    for operator in operator_list:
+        dict_impact_op[operator]['fixed'].insert(0, 'network_type', "fixe")
+        dict_impact_op[operator]['mobile'].insert(0, 'network_type', "mobile")
+        frames = [dict_impact_op[operator]['fixed'], dict_impact_op[operator]['mobile']]
+        impact_op_concat = pd.concat(frames)
+        impact_op_concat = impact_op_concat.rename(columns={'type': 'indicator_type'})
+        impact_op_concat.insert(0, 'operator', operator)
+        dict_impact_op_concat.append(impact_op_concat)
+    df_impact = pd.concat(dict_impact_op_concat)
+    with pd.ExcelWriter(filename) as writer:
+            df_impact.to_excel(writer, index=False)
+
+
+def save_results_detailed(filename: str, operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
+    """ Save in one file all the detailed results for every indicators (one sheet per operator)"""
+
+    with pd.ExcelWriter(filename) as writer:
         for operator in operator_list:
             df_impact_op_summed = sum_impacts_on_type(dict_impact_op[operator])
             df_impact_op_summed.to_excel(writer, sheet_name=operator, index=False)
 
 
-def save_results_by_category(operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
+def save_results_by_category(filename: str, operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
     """ Save in one file the results by category for every indicators (one sheet per operator)"""
-    file_name = "../Results_by_category_flux_method.xlsx"
 
-    with pd.ExcelWriter(file_name) as writer:
+    with pd.ExcelWriter(filename) as writer:
         for operator in operator_list:
             df_impact_op_summed = sum_impacts_on_type(dict_impact_op[operator])
             df_impact_cat = sum_impacts_on_category(df_impact_op_summed)
             df_impact_cat.to_excel(writer, sheet_name=operator, index=False)
 
 
-def save_results_percentage_by_category(operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
+def save_results_percentage_by_category(filename: str, operator_list: List[str], dict_impact_op: List[pd.DataFrame]):
     """ Save in one file the results by category for every indicators (one sheet per operator)"""
-    file_name = "../Results_percentage_by_category_flux_method.xlsx"
 
-    with pd.ExcelWriter(file_name) as writer:
+    with pd.ExcelWriter(filename) as writer:
         for operator in operator_list:
             df_impact_op_summed = sum_impacts_on_type(dict_impact_op[operator])
             df_impact_cat = sum_impacts_on_category(df_impact_op_summed)
@@ -76,11 +109,12 @@ def save_results_percentage_by_category(operator_list: List[str], dict_impact_op
 
 
 def save_results_global(filename: str, operator_list: List[str], dict_data_operator: pd.DataFrame):
-    """ Put the global impacts per operator in the right format to display them in one signle table """
+    """ Put the global impacts per operator in the right format to display them in one single table """
     list_results = []
     index_list = []
-
     for operator in operator_list:
+            if (operator == "orange"):
+                print(dict_data_operator[operator]['fixed'])
             index_list.append(operator+' fixed')
             index_list.append(operator+' mobile')
             list_results.append(dict_data_operator[operator]['fixed']['impact'])
@@ -92,7 +126,6 @@ def save_results_global(filename: str, operator_list: List[str], dict_data_opera
     df_results = pd.DataFrame(data=list_results)
     df_results.index = index_list
     df_results.columns = dict_data_operator['adista']['fixed']['index']
-
     df_results.to_excel(filename)
 
 

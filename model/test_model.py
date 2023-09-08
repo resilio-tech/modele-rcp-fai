@@ -41,10 +41,11 @@ def test_compute_elec():
     # WHEN
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
-                dict_purchase_list[operator] = compute_electrical_consumption(dict_purchase_list[operator], operator_data, df_elec)
+                dict_purchase_list[operator], operators_data.loc[operator] = compute_electrical_consumption("purchase", dict_purchase_list[operator], operator_data, df_elec)
 
     # THEN
-    assert dict_purchase_list['operateur1'][0]["real_elec"].iloc[0] == 50*3504*operators_data.loc['operateur1']["conso_elec_fix"]/(150*3504)
+    print(dict_purchase_list['operateur1'][3])
+    assert dict_purchase_list['operateur1'][0]["real_elec"].iloc[0] == (50*3504)*operators_data.loc['operateur1']["conso_elec_fix"]/(150*3504)
 
 
 
@@ -63,7 +64,7 @@ def test_impact_multiplication():
 
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
-                dict_purchase_list[operator] = compute_electrical_consumption(dict_purchase_list[operator], operator_data, df_elec)
+                dict_purchase_list[operator], operators_data.loc[operator] = compute_electrical_consumption("purchase", dict_purchase_list[operator], operator_data, df_elec)
 
     # WHEN the unitary impacts are multiplied by quantity
     for operator in operator_list:
@@ -93,7 +94,7 @@ def test_allocation_ab():
 
     dict_impact_list, dict_purchase_list, dict_dismounting_list = prepare_data_flux_method(operator_list, filename_list, filename_impacts)
 
-    dict_purchase_list['operateur1'] = compute_electrical_consumption(dict_purchase_list['operateur1'], operators_data.loc['operateur1'], df_elec)
+    dict_purchase_list['operateur1'], operators_data.loc['operateur1'] = compute_electrical_consumption("purchase", dict_purchase_list['operateur1'], operators_data.loc['operateur1'], df_elec)
 
     for i in range(0, 6):
             dict_impact_list['operateur1'][i] = multiply_unitary_impacts_by_quantity(dict_impact_list['operateur1'][i], dict_purchase_list['operateur1'][i], dict_dismounting_list['operateur1'][i])
@@ -192,7 +193,7 @@ def test_allocation_multi_op():
 
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
-                dict_purchase_list[operator] = compute_electrical_consumption(dict_purchase_list[operator], operator_data, df_elec)
+                dict_purchase_list[operator], operators_data.loc[operator] = compute_electrical_consumption("purchase", dict_purchase_list[operator], operator_data, df_elec)
     
     for operator in operator_list:
             for i in range(6):
@@ -210,10 +211,10 @@ def test_allocation_multi_op():
     # THEN
     weight_operateur1_a = 30*1024
     weight_operateur1_b = 30*400
-    weight_operateur3_a = 60*2048
-    weight_operateur3_b = 60*500
     weight_operateur2_a = 50*4096
     weight_operateur2_b = 50*700
+    weight_operateur3_a = 60*2048
+    weight_operateur3_b = 60*500
 
     total_weight_a = weight_operateur1_a + weight_operateur3_a + weight_operateur2_a
     total_weight_b = weight_operateur1_b + weight_operateur3_b + weight_operateur2_b
@@ -221,8 +222,8 @@ def test_allocation_multi_op():
     norm_weight_operateur1_a = weight_operateur1_a / total_weight_a
     norm_weight_operateur1_b = weight_operateur1_b / total_weight_b
 
-    impact_operateur1_a = 50*0.8*1 + 100*1*norm_weight_operateur1_a + 110*1*norm_weight_operateur1_a + 200*1*norm_weight_operateur1_a
-    impact_operateur1_b = 50*0.8*0 + 100*0*norm_weight_operateur1_b + 110*0*norm_weight_operateur1_b + 200*0*norm_weight_operateur1_b
+    impact_operateur1_a = 50*0.8*1 + 100*1*norm_weight_operateur1_a + 100*1*norm_weight_operateur1_a + 100*1*norm_weight_operateur1_a
+    impact_operateur1_b = 50*0.8*0 + 100*0*norm_weight_operateur1_b + 100*0*norm_weight_operateur1_b + 100*0*norm_weight_operateur1_b
 
     assert dict_impact_list_modif_fix['operateur1'][0]["BLD ADPe typA"].iloc[0] == impact_operateur1_a
     assert dict_impact_list_modif_fix['operateur1'][0]["DIS ADPe typB"].iloc[0] == impact_operateur1_b
@@ -245,7 +246,7 @@ def test_allocation_multi_network():
 
     for operator in operator_list:
                 operator_data = operators_data.loc[operator]
-                dict_purchase_list[operator] = compute_electrical_consumption(dict_purchase_list[operator], operator_data, df_elec)
+                dict_purchase_list[operator], operators_data.loc[operator] = compute_electrical_consumption("purchase", dict_purchase_list[operator], operator_data, df_elec)
     
     for operator in operator_list:
             for i in range(6):
@@ -280,10 +281,12 @@ def test_allocation_multi_network():
     operator_weight_a_mob = 1 - operator_weight_a_fix
     operator_weight_b_mob = 1 - operator_weight_b_fix
     
-    assert dict_impact_list_modif_mob_fix['operateur1'][0]["BLD ADPe typA"].iloc[43] == impact_fibre_a*operator_weight_a_fix
-    assert dict_impact_list_modif_mob_fix['operateur1'][0]["BLD ADPe typB"].iloc[43] == impact_fibre_b*operator_weight_b_fix
-    assert dict_impact_list_modif_mob_fix['operateur1'][2]["BLD ADPe typA"].iloc[43] == impact_fibre_a*operator_weight_a_mob
-    assert dict_impact_list_modif_mob_fix['operateur1'][2]["BLD ADPe typB"].iloc[43] == impact_fibre_b*operator_weight_b_mob
+    print(dict_impact_list_modif_mob_fix['operateur1'][0]["BLD ADPe typB"])
+    print(dict_impact_list_modif_mob_fix['operateur1'][2]["BLD ADPe typB"])
+    assert dict_impact_list_modif_mob_fix['operateur1'][0]["BLD ADPe typA"].iloc[46] == impact_fibre_a*operator_weight_a_fix
+    assert dict_impact_list_modif_mob_fix['operateur1'][0]["BLD ADPe typB"].iloc[46] == impact_fibre_b*operator_weight_b_fix
+    assert dict_impact_list_modif_mob_fix['operateur1'][2]["BLD ADPe typA"].iloc[33] == impact_fibre_a*operator_weight_a_mob
+    assert dict_impact_list_modif_mob_fix['operateur1'][2]["BLD ADPe typB"].iloc[33] == impact_fibre_b*operator_weight_b_mob
 
 
 
@@ -303,7 +306,7 @@ def test_sum_impacts():
 
     for operator in operator_list:
             operator_data = operators_data.loc[operator]
-            dict_purchase_list[operator] = compute_electrical_consumption(dict_purchase_list[operator], operator_data, df_elec)
+            dict_purchase_list[operator], operators_data.loc[operator] = compute_electrical_consumption("purchase", dict_purchase_list[operator], operator_data, df_elec)
     
     for operator in operator_list:
             for i in range(6):
@@ -339,16 +342,3 @@ def test_sum_impacts():
     diff = dict_impact_op['operateur1']["fixed"]["impact"].iloc[0] - (75.1428571428571+115.142857142857+228504.935714286+40+59.4285714285714)
     assert diff <= 0.01
 
-
-"""
-def test_model_lifespan_method():
-    # GIVEN
-    operator_list = ['operateur1', 'operateur2', 'operateur3']
-    filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
-                    'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
-                    'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
-    dict_data_operator = model_pipeline_lifespan_method(operator_list, filename_list)
-    assert False
-"""
-
-    
