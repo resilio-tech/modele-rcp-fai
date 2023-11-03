@@ -45,6 +45,8 @@ def multiply_unitary_impacts_by_quantity(dict_impact: pd.DataFrame, dict_purchas
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]].multiply(dict_purchase["quantity_new"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]].multiply(dict_purchase["quantity_new"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]].multiply(dict_purchase["real_elec"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('INS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('INS')]].multiply(dict_purchase["quantity_new"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('MTN')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('MTN')]].multiply(dict_purchase["quantity_new"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]].multiply(dict_dismounting["quantity"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]].multiply(dict_purchase["quantity_reconditioning"], axis="index")
         
@@ -60,6 +62,8 @@ def multiply_unitary_impacts_by_quantity_and_lifespan(dict_impact: pd.DataFrame,
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('BLD')]].multiply(dict_inventory["quantity_new"], axis="index").div(dict_inventory["lifespan"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('DIS')]].multiply(dict_inventory["quantity_new"], axis="index").div(dict_inventory["lifespan"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('USE')]].multiply(dict_inventory["real_elec"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('INS')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('INS')]].multiply(dict_inventory["quantity_new"], axis="index")
+        dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('MTN')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('MTN')]].multiply(dict_inventory["quantity_new"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('EOL')]].multiply(dict_inventory["quantity"], axis="index").div(dict_inventory["lifespan"], axis="index")
         dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]] = dict_impact[dict_impact.columns[pd.Series(dict_impact.columns).str.startswith('REC')]].multiply(dict_inventory["quantity_reconditioning"], axis="index").div(dict_inventory["lifespan"], axis="index")
         dict_impact_clean = dict_impact.fillna(0)
@@ -67,8 +71,8 @@ def multiply_unitary_impacts_by_quantity_and_lifespan(dict_impact: pd.DataFrame,
 
 
 def allocation_ab_factors(dict_impact_op: List[pd.DataFrame], df_ab_factors: List[pd.DataFrame]) -> List[pd.DataFrame]:
-        LC_STEPS = ["BLD", "DIS", "USE", "REC", "EOL"]
-        INDICATOR_LIST = ["ADPe", "GWP", "AP", "PM", "IR", "TPE"]
+        LC_STEPS = ["BLD", "DIS", "USE", "INS", "MTN", "REC", "EOL"]
+        INDICATOR_LIST = ["ADPe", "ADPf", "AP", "CTUe", "CTUh-c", "CTUh-nc", "Epf", "Epm", "Ept", "GWP", "GWPb", "GWPf", "GWPlu", "IR", "LU", "ODP", "PM", "POCP", "WU", "MIPS", "TPE",]
         for i in range(0, 6):
                 r = i%3
                 for lc_step in LC_STEPS:
@@ -235,10 +239,22 @@ def allocation_multi_network(impact_op : List[pd.DataFrame], operator_data: pd.D
 
 def compute_quality_score(operator_list: List[str], dict_purchase_list: dict[(str, list[pd.DataFrame])], dict_impact: dict[(str, list[pd.DataFrame])]) -> dict[(str, float)]:
         PLANETARY_BOUNDARIES = {'ADPe': 3.18e-2,
-                                'GWP': 9.85e2,
-                                'AP': 1.45e2,
-                                'PM': 7.47e-5,
-                                'IR': 7.62e4}
+                        'ADPf': 3.24e+4,
+                        'AP': 1.45e2,
+                        'GWP': 9.85e2,
+                        'LU': 1.84e3,
+                        'ODP': 7.8e-2,
+                        'PM': 7.47e-5,
+                        'POCP': 5.88e1,
+                        'WU': 2.63e4,
+                        'CTUe': 1.90e4,
+                        'CTUh-c': 1.39e-4,
+                        'CTUh-nc': 5.93e-4,
+                        'Epf': 8.40 - 1,
+                        'Epm': 2.9e1,
+                        'Ept': 8.87e2,
+                        'IR': 7.62e4
+                        }  # not exhaustive: there is not GWPb, GWPf, GWPlu, MIPS, TPE
         quality_score_dict = {}
         for operator in operator_list:
                 total_weighted_quality = 0
@@ -250,7 +266,7 @@ def compute_quality_score(operator_list: List[str], dict_purchase_list: dict[(st
                         df_impacts = df_impacts.groupby(['indicator']).sum().reset_index()
                         df_impacts.index = df_impacts["indicator"]
                         df_impacts = df_impacts.drop(['indicator'], axis=1).T
-                        df_impacts = df_impacts.drop(['TPE'], axis=1)
+                        df_impacts = df_impacts.drop(['GWPb', 'GWPf', 'GWPlu', 'MIPS', 'TPE'], axis=1)
                         df_impacts_weight = df_impacts.divide(PLANETARY_BOUNDARIES, axis=1).sum(axis=1)
                         df_impacts["weighted_quality"] = df_impacts_weight*dict_purchase_list[operator][i]["quality_score"]
                         total_weighted_quality += df_impacts["weighted_quality"].sum()

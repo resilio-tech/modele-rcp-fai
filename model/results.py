@@ -5,8 +5,8 @@ from typing import Optional, List
 
 
 def sum_impacts_on_type(dict_impact_op: List[pd.DataFrame]) -> pd.DataFrame:
-    LC_STEPS = ["BLD", "DIS", "USE", "REC", "EOL"]
-    INDICATOR_LIST = ["ADPe", "GWP", "AP", "PM", "IR", "TPE"]
+    LC_STEPS = ["BLD", "DIS", "USE", "INS", "MTN", "REC", "EOL"]
+    INDICATOR_LIST = ["ADPe", "ADPf", "AP", "CTUe", "CTUh-c", "CTUh-nc", "Epf", "Epm", "Ept", "GWP", "GWPb", "GWPf", "GWPlu", "IR", "LU", "ODP", "PM", "POCP", "WU", "MIPS", "TPE",]
     dict_impact_op_summed = dict_impact_op.copy()
     for i in range(0, 6):
             for lc_step in LC_STEPS:

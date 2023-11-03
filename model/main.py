@@ -30,16 +30,6 @@ def model_pipeline_flux_method(method_name: str, operator_list : list[str], file
                 operator_data = operators_data.loc[operator]
                 dict_purchase_list[operator], operators_data_updated.loc[operator] = compute_electrical_consumption("purchase", dict_purchase_list[operator], operator_data, df_elec)
 
-
-        with pd.ExcelWriter("../Results_" + method_name + "_elec_fixe.xlsx") as writer:
-                for operator in operator_list:
-                        dict_purchase_list[operator][0].to_excel(writer, sheet_name=operator, index=False)
-        with pd.ExcelWriter("../Results_" + method_name + "_elec_mobile.xlsx") as writer:
-                for operator in operator_list:
-                        dict_purchase_list[operator][2].to_excel(writer, sheet_name=operator, index=False)
-        with pd.ExcelWriter("../Results_" + method_name + "_operator_data.xlsx") as writer:
-                operators_data_updated.to_excel(writer)
-
         # Step 1 : Multiply the unitary impacts for equipments by the number of equipments of each type
         for operator in operator_list:
                 for i in range(0, 6):
@@ -73,14 +63,11 @@ def model_pipeline_flux_method(method_name: str, operator_list : list[str], file
 
         # Quality analysis
         quality_dict = compute_quality_score(operator_list, dict_purchase_list, dict_impact_list_modif_mob_fix)
-        save_quality_score_results("../Results_" + method_name + "_quality.xlsx", quality_dict)
+        #save_quality_score_results("../Results_" + method_name + "_quality.xlsx", quality_dict)
 
         # Save intermediate results for analysis
         save_detail_table_excel("../Results_" + method_name + "_table.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-        #save_results_detailed("../Results_detailed_flux_method.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-        #save_results_by_category("../Results_by_category_flux_method.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-        #save_results_percentage_by_category("../Results_percentage_by_category_flux_method.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-
+        
 
         # Step 4 : Sum the impacts for each operator
         # We sum over all equipments and all life cycle steps.
@@ -90,10 +77,6 @@ def model_pipeline_flux_method(method_name: str, operator_list : list[str], file
 
                 # dict_impact_op = dictionnary with {operator : {"fixed" : impacts , "mobile" : impacts}}
                 dict_impact_op[operator] = dict_op
-                
-
-        # Save total results of operators
-        #save_results_global("../Resultats_global_flux_method.xlsx", operator_list, dict_impact_op)
 
         # Step 5 : Allocation for the FU calculations
         for operator in operator_list:
@@ -102,7 +85,6 @@ def model_pipeline_flux_method(method_name: str, operator_list : list[str], file
 
 
         # Save FU results of operators
-        #save_results_global("../Resultats_FU_flux_method.xlsx", operator_list, dict_impact_op)
         save_FU_table_excel("../Results_" + method_name + "_table_FU.xlsx", operator_list, dict_impact_op)
 
         return dict_impact_op
@@ -131,14 +113,6 @@ def model_pipeline_lifespan_method(method_name: str, operator_list : list[str], 
         for operator in operator_list:
                 operator_data = operators_data.loc[operator]
                 dict_inventory_list[operator], operators_data_updated.loc[operator] = compute_electrical_consumption("full_inventory", dict_inventory_list[operator], operator_data, df_elec)
-        with pd.ExcelWriter("../Results_" + method_name + "_elec_fixe.xlsx") as writer:
-                for operator in operator_list:
-                        dict_inventory_list[operator][0].to_excel(writer, sheet_name=operator, index=False)
-        with pd.ExcelWriter("../Results_" + method_name + "_elec_mobile.xlsx") as writer:
-                for operator in operator_list:
-                        dict_inventory_list[operator][2].to_excel(writer, sheet_name=operator, index=False)
-        with pd.ExcelWriter("../Results_" + method_name + "_operator_data.xlsx") as writer:
-                operators_data_updated.to_excel(writer)
 
         # Step 1 : Multiply the unitary impacts for equipments by the number of equipments of each type
         for operator in operator_list:
@@ -170,14 +144,10 @@ def model_pipeline_lifespan_method(method_name: str, operator_list : list[str], 
 
         # Quality analysis
         quality_dict = compute_quality_score(operator_list, dict_inventory_list, dict_impact_list_modif_mob_fix)
-        save_quality_score_results("../Results_" + method_name + "_quality.xlsx", quality_dict)
 
         # Save intermediate results for analysis
         save_detail_table_excel("../Results_" + method_name + "_table.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-        #save_results_detailed("../Results_detailed_lifespan_method.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-        #save_results_by_category("../Results_by_category_lifespan_method.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-        #save_results_percentage_by_category("../Results_percentage_by_category_lifespan_method.xlsx", operator_list, dict_impact_list_modif_mob_fix)
-
+        
         # Step 4 : Sum the impacts for each operator
         # We sum over all equipments and all life cycle steps.
         dict_impact_op = {}
@@ -187,16 +157,12 @@ def model_pipeline_lifespan_method(method_name: str, operator_list : list[str], 
                 # dict_impact_op = dictionnary with {operator : {"fixed" : impacts , "mobile" : impacts}}
                 dict_impact_op[operator] = dict_op
 
-        # Save total results of operators
-        #save_results_global("../Resultats_global_lifespan_method.xlsx", operator_list, dict_impact_op)
-
         # Step 5 : Allocation for the FU calculations
         for operator in operator_list:
                 operator_data = operators_data.loc[operator]
                 dict_impact_op[operator] = allocation_fu(dict_impact_op[operator], operator_data)
 
         # Save FU results of operators
-        #save_results_global("../Resultats_FU_lifespan_method.xlsx", operator_list, dict_impact_op)
         save_FU_table_excel("../Results_" + method_name + "_table_FU.xlsx", operator_list, dict_impact_op)
 
         return dict_impact_op

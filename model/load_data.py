@@ -62,7 +62,7 @@ def load_full_inventory(filename: str) -> list[pd.DataFrame]:
 def load_impacts(filename :str) -> list[pd.DataFrame]:
         """Load the Excel sheet containing the unitary impacts and create a Dataframe"""
         df = load_excel(filename, sheet_name="facteurs_impacts", skiprows=2, header=0, index_col=None,
-                        usecols="B:C,E:AH,AJ:AK,AM:BP,BR:BS,BU:CX")
+                        usecols="B:C,E:EU,EW:EX,EZ:KP,KR:KS,KU:QK")
         df_list = separate_impacts_by_category(df)
         return df_list
 
@@ -76,7 +76,7 @@ def load_ab_factors() -> list[pd.DataFrame]:
         """Load the Excel file containing the allocation rules from one indicator to its a and b coefficients.
         Create the corresponding Dataframe"""
         filename = "../Grille_allocation_ab.xlsx"
-        df = load_excel(filename, sheet_name="Feuil1", skiprows=2, header=0, index_col=None, usecols="B:L,N:X,Z:AJ")
+        df = load_excel(filename, sheet_name="Feuil1", skiprows=2, header=0, index_col=None, usecols="B:P,R:AF,AH:AV")
         df_list = separate_ab_factors_by_category(df)
         return df_list
 
@@ -151,11 +151,14 @@ def separate_full_inventory_by_category(df: pd.DataFrame) -> list[pd.DataFrame]:
 def separate_impacts_by_category(df: pd.DataFrame) -> List[pd.DataFrame]:
         """Separate one Dataframe into 6, each corresponding to one RCP category"""
         column_names = ["category", "equipment",
-                        "BLD ADPe", "BLD GWP", "BLD AP", "BLD PM", "BLD IR", "BLD TPE",
-                        "DIS ADPe", "DIS GWP", "DIS AP", "DIS PM", "DIS IR", "DIS TPE",
-                        "USE ADPe", "USE GWP", "USE AP", "USE PM", "USE IR", "USE TPE",
-                        "REC ADPe", "REC GWP", "REC AP", "REC PM", "REC IR", "REC TPE",
-                        "EOL ADPe", "EOL GWP", "EOL AP", "EOL PM", "EOL IR", "EOL TPE"]
+        "BLD ADPe", "BLD ADPf", "BLD AP", "BLD CTUe", "BLD CTUh-c", "BLD CTUh-nc", "BLD Epf", "BLD Epm", "BLD Ept", "BLD GWP", "BLD GWPb", "BLD GWPf", "BLD GWPlu", "BLD IR", "BLD LU", "BLD ODP", "BLD PM", "BLD POCP", "BLD WU", "BLD MIPS", "BLD TPE",
+        "DIS ADPe", "DIS ADPf", "DIS AP", "DIS CTUe", "DIS CTUh-c", "DIS CTUh-nc", "DIS Epf", "DIS Epm", "DIS Ept", "DIS GWP", "DIS GWPb", "DIS GWPf", "DIS GWPlu", "DIS IR", "DIS LU", "DIS ODP", "DIS PM", "DIS POCP", "DIS WU", "DIS MIPS", "DIS TPE",
+        "USE ADPe", "USE ADPf", "USE AP", "USE CTUe", "USE CTUh-c", "USE CTUh-nc", "USE Epf", "USE Epm", "USE Ept", "USE GWP", "USE GWPb", "USE GWPf", "USE GWPlu", "USE IR", "USE LU", "USE ODP", "USE PM", "USE POCP", "USE WU", "USE MIPS", "USE TPE",
+        "INS ADPe", "INS ADPf", "INS AP", "INS CTUe", "INS CTUh-c", "INS CTUh-nc", "INS Epf", "INS Epm", "INS Ept", "INS GWP", "INS GWPb", "INS GWPf", "INS GWPlu", "INS IR", "INS LU", "INS ODP", "INS PM", "INS POCP", "INS WU", "INS MIPS", "INS TPE",
+        "MTN ADPe", "MTN ADPf", "MTN AP", "MTN CTUe", "MTN CTUh-c", "MTN CTUh-nc", "MTN Epf", "MTN Epm", "MTN Ept", "MTN GWP", "MTN GWPb", "MTN GWPf", "MTN GWPlu", "MTN IR", "MTN LU", "MTN ODP", "MTN PM", "MTN POCP", "MTN WU", "MTN MIPS", "MTN TPE",
+        "REC ADPe", "REC ADPf", "REC AP", "REC CTUe", "REC CTUh-c", "REC CTUh-nc", "REC Epf", "REC Epm", "REC Ept", "REC GWP", "REC GWPb", "REC GWPf", "REC GWPlu", "REC IR", "REC LU", "REC ODP", "REC PM", "REC POCP", "REC WU", "REC MIPS", "REC TPE",
+        "EOL ADPe", "EOL ADPf", "EOL AP", "EOL CTUe", "EOL CTUh-c", "EOL CTUh-nc", "EOL Epf", "EOL Epm", "EOL Ept", "EOL GWP", "EOL GWPb", "EOL GWPf", "EOL GWPlu", "EOL IR", "EOL LU", "EOL ODP", "EOL PM", "EOL POCP", "EOL WU", "EOL MIPS", "EOL TPE"
+        ]
         half_length_row = 47
         length_row = half_length_row*2
         width_col = len(column_names)
@@ -181,6 +184,8 @@ def separate_ab_factors_by_category(df: pd.DataFrame) -> List[pd.DataFrame]:
                         "BLD typA", "BLD typB",
                         "DIS typA", "DIS typB",
                         "USE typA", "USE typB",
+                        "INS typA", "INS typB",
+                        "MTN typA", "MTN typB",
                         "REC typA", "REC typB",
                         "EOL typA", "EOL typB"]
         half_length_row = 47
