@@ -2,7 +2,6 @@
 from load_data import prepare_data_flux_method, load_ab_factors, load_op_data, load_elec_consumption
 from model import compute_electrical_consumption, multiply_unitary_impacts_by_quantity, allocation_ab_factors, compute_operator_weight, allocation_multi_network, allocation_multi_op, sum_impacts_operator
 
-
 def test_data_format():
     # GIVEN
     operator_list = ['operateur1', 'operateur2', 'operateur3']

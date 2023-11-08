@@ -10,7 +10,7 @@ def run_model_flux_method():
     filename_operator_data = "../data_operateurs_test.xlsx"
     filename_impacts = "../Facteurs_impacts_test.xlsx"
 
-    dict_data_operator = model_pipeline_flux_method("flux_method", operator_list, filename_list, filename_impacts, filename_operator_data)
+    _ = model_pipeline_flux_method("flux_method", operator_list, filename_list, filename_impacts, filename_operator_data)
 
 def run_model_lifespan_method():
     # GIVEN
@@ -21,7 +21,7 @@ def run_model_lifespan_method():
     filename_operator_data = "../data_operateurs_test.xlsx"
     filename_impacts = "../Facteurs_impacts_test.xlsx"
 
-    dict_data_operator = model_pipeline_lifespan_method("lifespan_method", operator_list, filename_list, filename_impacts, filename_operator_data)
+    _ = model_pipeline_lifespan_method("lifespan_method", operator_list, filename_list, filename_impacts, filename_operator_data)
 
 
 run_model_flux_method()
