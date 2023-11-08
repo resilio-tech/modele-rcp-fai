@@ -1,8 +1,5 @@
 
-import pandas as pd
-
-from main import model_pipeline_flux_method, model_pipeline_lifespan_method
-from load_data import prepare_data_flux_method, prepare_data_lifespan_method, load_ab_factors, load_op_data, load_elec_consumption
+from load_data import prepare_data_flux_method, load_ab_factors, load_op_data, load_elec_consumption
 from model import compute_electrical_consumption, multiply_unitary_impacts_by_quantity, allocation_ab_factors, compute_operator_weight, allocation_multi_network, allocation_multi_op, sum_impacts_operator
 
 
@@ -12,7 +9,7 @@ def test_data_format():
     filename_list = {'operateur1': "../Grille_collecte_test_operateur1.xlsx", 
                     'operateur2': "../Grille_collecte_test_operateur2.xlsx", 
                     'operateur3': "../Grille_collecte_test_operateur3.xlsx"}
-    filename_operator_data = "../../data_operateurs_test.xlsx"
+    filename_operator_data = "../data_operateurs_test.xlsx"
     filename_impacts = "../Facteurs_impacts_test.xlsx"
 
     # WHEN 
