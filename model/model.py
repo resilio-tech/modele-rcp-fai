@@ -7,11 +7,11 @@ from typing import Optional, List
 def compute_electrical_consumption(inventory_type: str, dict_list: List[pd.DataFrame], operator_data: pd.DataFrame, df_elec: List[pd.DataFrame]) -> List[pd.DataFrame]:
         
         # Adding the box consumption to the electricity consumption
-        for i in [0, 3]:
-                df_box = dict_list[i].loc[dict_list[i]["equipment"].str.contains('|'.join(['Box', 'ONT']))][["equipment", "quantity"]]
-                elec_box_unit = pd.DataFrame([93.4675, 93.4675, 93.4675, 35.04, 93.4675], columns=['annual_elec'])
-                elex_box_total = (df_box["quantity"]*elec_box_unit["annual_elec"]).sum()
-                operator_data["conso_elec_fix"] += elex_box_total
+        #for i in [0, 3]:
+        #        df_box = dict_list[i].loc[dict_list[i]["equipment"].str.contains('|'.join(['Box', 'ONT']))][["equipment", "quantity"]]
+        #        elec_box_unit = pd.DataFrame([93.4675, 93.4675, 93.4675, 35.04, 93.4675], columns=['annual_elec'])
+        #        elex_box_total = (df_box["quantity"]*elec_box_unit["annual_elec"]).sum()
+        #        operator_data["conso_elec_fix"] += elex_box_total
         
         list_elec = []
         for i in range(0, 6):
@@ -25,12 +25,12 @@ def compute_electrical_consumption(inventory_type: str, dict_list: List[pd.DataF
         total_elec_mobile = list_elec[2] + list_elec[5]
         
         # Allocation of electrical consumption among the equipments
-        dict_list[0]["real_elec"] = dict_list[0]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
+        dict_list[0]["real_elec"] = dict_list[0]["estimated_elec"]*operator_data["conso_elec_fix_kWh"]/total_elec_fixed
         dict_list[1]["real_elec"] = dict_list[1]["estimated_elec"]
-        dict_list[2]["real_elec"] = dict_list[2]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
-        dict_list[3]["real_elec"] = dict_list[3]["estimated_elec"]*operator_data["conso_elec_fix"]/total_elec_fixed
+        dict_list[2]["real_elec"] = dict_list[2]["estimated_elec"]*operator_data["conso_elec_mob_kWh"]/total_elec_mobile
+        dict_list[3]["real_elec"] = dict_list[3]["estimated_elec"]*operator_data["conso_elec_fix_kWh"]/total_elec_fixed
         dict_list[4]["real_elec"] = dict_list[4]["estimated_elec"]
-        dict_list[5]["real_elec"] = dict_list[5]["estimated_elec"]*operator_data["conso_elec_mob"]/total_elec_mobile
+        dict_list[5]["real_elec"] = dict_list[5]["estimated_elec"]*operator_data["conso_elec_mob_kWh"]/total_elec_mobile
         
         return dict_list, operator_data
 
@@ -103,13 +103,13 @@ def compute_operator_weight(alloc_string: pd.Series, network_type: str, operator
                 # 2. Depending on type of network, choose the appropriate weights for coeff. a and b
                 # Hypothesis : An operator with a higher quantity of consummed data will supposedly use more the equipment
                 if (network_type == "fixed"):
-                        operator_weight_a = operator_data['quantite_donnees_fix']
+                        operator_weight_a = operator_data['quantite_donnees_fix_To']
                         operator_weight_b = operator_data['nb_abonnes_fix']
                 elif(network_type == "mobile"):
-                        operator_weight_a = operator_data['quantite_donnees_mob']
+                        operator_weight_a = operator_data['quantite_donnees_mob_To']
                         operator_weight_b = operator_data['nb_abonnes_mob']
                 elif(network_type == "fixed_and_mobile"):
-                        operator_weight_a = operator_data['quantite_donnees_mob'] + operator_data['quantite_donnees_fix']
+                        operator_weight_a = operator_data['quantite_donnees_mob_To'] + operator_data['quantite_donnees_fix_To']
                         operator_weight_b = operator_data['nb_abonnes_mob'] + operator_data['nb_abonnes_fix']
                 # 3. Apply the a and b weights to the dictionnary containing the number of equipements
                 alloc_dict[k] = {'a': v*operator_weight_a, 'b': v*operator_weight_b}
@@ -215,7 +215,7 @@ def allocation_multi_op(network_type: str, inventory_type: str, inventory_op_i: 
 def allocation_multi_network(impact_op : List[pd.DataFrame], operator_data: pd.DataFrame) -> List[pd.DataFrame]:
         """Distribute the impacts of the equipments used for both fixed and mobile networks between these two types"""
 
-        operator_weight_a_fix = operator_data['quantite_donnees_fix']/(operator_data['quantite_donnees_fix']+operator_data['quantite_donnees_mob'])
+        operator_weight_a_fix = operator_data['quantite_donnees_fix_To']/(operator_data['quantite_donnees_fix_To']+operator_data['quantite_donnees_mob_To'])
         operator_weight_b_fix = operator_data['nb_abonnes_fix']/(operator_data['nb_abonnes_fix']+operator_data['nb_abonnes_mob'])
         operator_weight_a_mob = 1 - operator_weight_a_fix
         operator_weight_b_mob = 1 - operator_weight_b_fix
@@ -292,8 +292,8 @@ def allocation_fu(dict_impact_op : dict[(str, pd.DataFrame)], operator_data: pd.
         dict_impact_op["fixed"]["impact"] = dict_impact_op["fixed"]["impact"].div(12)
         dict_impact_op["mobile"]["impact"] = dict_impact_op["mobile"]["impact"].div(12)
         # Allocation with the quantity of consummed data
-        normalisation_factor_fix_typA = operator_data['quantite_donnees_fix']*1024 / 12
-        normalisation_factor_mob_typA = operator_data['quantite_donnees_mob']*1024 / 12
+        normalisation_factor_fix_typA = operator_data['quantite_donnees_fix_To']*1024 / 12
+        normalisation_factor_mob_typA = operator_data['quantite_donnees_mob_To']*1024 / 12
         dict_impact_op["fixed"]["impact"].loc[dict_impact_op["fixed"]["type"] == "typA"] = dict_impact_op["fixed"]["impact"][dict_impact_op["fixed"]["type"] == "typA"] / normalisation_factor_fix_typA
         dict_impact_op["mobile"]["impact"].loc[dict_impact_op["mobile"]["type"] == "typA"] = dict_impact_op["mobile"]["impact"][dict_impact_op["mobile"]["type"] == "typA"] / normalisation_factor_mob_typA
         # Allocation with the number of users

@@ -1,14 +1,12 @@
 
-import os
-
 import pandas as pd
 
-from typing import Optional, List
+from typing import List
 
 from load_data import prepare_data_flux_method, prepare_data_lifespan_method, load_op_data, load_ab_factors, load_elec_consumption
 from model import compute_electrical_consumption, multiply_unitary_impacts_by_quantity, multiply_unitary_impacts_by_quantity_and_lifespan, \
         allocation_ab_factors, allocation_multi_op, allocation_multi_network, allocation_fu, sum_impacts_operator, compute_quality_score
-from results import save_results_detailed, save_results_by_category, save_results_percentage_by_category, save_results_global, save_quality_score_results, save_detail_table_excel, save_FU_table_excel
+from results import save_detail_table_excel, save_FU_table_excel
 
 
 def model_pipeline_flux_method(method_name: str, operator_list : list[str], filename_list: dict[(str, str)], filename_impacts: str, filename_operator_data: str) -> pd.DataFrame:
