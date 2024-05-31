@@ -15,7 +15,9 @@ To run the model's calculation, use the Python file `run.py`. It uses the Excel 
 ### Prerequisites
 
 #### Libraries
-The following librairy is used : [pandas](https://pandas.pydata.org/) 2.1.2
+The following librairy is used : 
+- [pandas](https://pandas.pydata.org/) 2.1.2
+- [openpyxl](https://openpyxl.readthedocs.io/en/stable/) 3.1.3
 
 #### Code
 
