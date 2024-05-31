@@ -6,7 +6,7 @@ import pandas as pd
 from typing import Optional, List
 
 
-def prepare_data_flux_method(operator_list: list[str], filename_list: dict[(str, str)], filename_impacts: str) -> list[ dict[(str, list[pd.DataFrame])], dict[(str, list[pd.DataFrame])]]:
+def prepare_data_flux_method(operator_list: List[str], filename_list: dict[(str, str)], filename_impacts: str) -> list[ dict[(str, list[pd.DataFrame])], dict[(str, list[pd.DataFrame])]]:
         """Define the pipeline of treatment of the inventories"""
         dict_purchase_list = {} # purchase : quantity of equipements that are purchased
         dict_dismounting_list = {} # dismouting : quantity of equipements tbat are dismounted

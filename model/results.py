@@ -1,8 +1,7 @@
 
 import pandas as pd
 
-from typing import Optional, List
-
+from typing import List
 
 def sum_impacts_on_type(dict_impact_op: List[pd.DataFrame]) -> pd.DataFrame:
     LC_STEPS = ["BLD", "DIS", "USE", "INS", "MTN", "REC", "EOL"]

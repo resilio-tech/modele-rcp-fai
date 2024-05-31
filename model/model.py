@@ -6,13 +6,6 @@ from typing import Optional, List
 
 def compute_electrical_consumption(inventory_type: str, dict_list: List[pd.DataFrame], operator_data: pd.DataFrame, df_elec: List[pd.DataFrame]) -> List[pd.DataFrame]:
         
-        # Adding the box consumption to the electricity consumption
-        #for i in [0, 3]:
-        #        df_box = dict_list[i].loc[dict_list[i]["equipment"].str.contains('|'.join(['Box', 'ONT']))][["equipment", "quantity"]]
-        #        elec_box_unit = pd.DataFrame([93.4675, 93.4675, 93.4675, 35.04, 93.4675], columns=['annual_elec'])
-        #        elex_box_total = (df_box["quantity"]*elec_box_unit["annual_elec"]).sum()
-        #        operator_data["conso_elec_fix"] += elex_box_total
-        
         list_elec = []
         for i in range(0, 6):
                 r = i%3
@@ -232,8 +225,12 @@ def allocation_multi_network(impact_op : List[pd.DataFrame], operator_data: pd.D
                                 elif ("typB" in col):
                                         impacts_fix[col].loc[index] = impacts_fix[col].loc[index]*operator_weight_b_fix
                                         impacts_mob[col].loc[index] = impacts_mob[col].loc[index]*operator_weight_b_mob
-                        impact_op[0] = impact_op[0].append(impacts_fix.loc[index], ignore_index=True)
-                        impact_op[2] = impact_op[2].append(impacts_mob.loc[index], ignore_index=True)
+                        #impact_op[0] = impact_op[0].append(impacts_fix.loc[index], ignore_index=True)
+                        #impact_op[0] = pd.concat([impact_op[0], impacts_fix.loc[index]])
+                        impact_op[0].loc[len(impact_op[0]), impact_op[0].columns] = impacts_fix.loc[index]
+                        #impact_op[2] = impact_op[2].append(impacts_mob.loc[index], ignore_index=True)
+                        #impact_op[2] = pd.concat([impact_op[2], impacts_fix.loc[index]])
+                        impact_op[2].loc[len(impact_op[2]), impact_op[2].columns] = impacts_fix.loc[index]
         return impact_op
 
 
