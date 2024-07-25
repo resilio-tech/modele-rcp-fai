@@ -230,7 +230,7 @@ def allocation_multi_network(impact_op : List[pd.DataFrame], operator_data: pd.D
                         impact_op[0].loc[len(impact_op[0]), impact_op[0].columns] = impacts_fix.loc[index]
                         #impact_op[2] = impact_op[2].append(impacts_mob.loc[index], ignore_index=True)
                         #impact_op[2] = pd.concat([impact_op[2], impacts_fix.loc[index]])
-                        impact_op[2].loc[len(impact_op[2]), impact_op[2].columns] = impacts_fix.loc[index]
+                        impact_op[2].loc[len(impact_op[2]), impact_op[2].columns] = impacts_mob.loc[index]
         return impact_op
 
 
